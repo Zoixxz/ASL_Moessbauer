@@ -76,31 +76,61 @@ print(path_measurements)
 ################################################
 # 2. calibration
 ################################################
-
+low_cut = 18
+high_cut = 29
+cut_dimension = 512 - (low_cut + high_cut)
+width = [50, 20, 15, 15, 15]
+minima_num = [4, 6, 6, 6, 6]
+voltages = [30., 40., 50., 60., 70.]
 calibrations = measurement_array[-5:]
 
 x_ax = np.arange(512)
 
-low_cut = 18
-high_cut = 29
-cut_dimension = 512 - (low_cut + high_cut)
 
 cut_calibration = [calibrations[i][low_cut:-high_cut] for i in range(len(calibrations))]
 
 #fit the calibration measurements with a straight line
-width = [50, 20, 15, 15, 15]
-minima_num = [4, 6, 6, 6, 6]
+
 
 values_of_minima = [local_minima(cut_calibration[i], minima_num[i], width[i]) for i in range(5)]	
 print(values_of_minima)
 
-x_vals = [np.ndarray.tolist(cut_calibration[0]).index(values_of_minima[0][i]) for i in range(4)]
+x_vals = [[np.ndarray.tolist(cut_calibration[j]).index(values_of_minima[j][i]) for i in range(minima_num[j])] for j in range(5)]
+
 
 #TODO: sort calibration values by index position in ascending order
-x_vals.sort()
-y_vals = [cut_calibration[0][x_vals[i]] for i in range(4)]
+sorted_x_vals = []
+for i in range(5): #sort the x_vals in ascending order
+	__sorted_local_x_vals = x_vals[i]
+	__sorted_local_x_vals.sort()
+	sorted_x_vals.append(__sorted_local_x_vals)
 
+sorted_y_vals = [[cut_calibration[i][sorted_x_vals[i][j]] for j in range(minima_num[i])] for i in range(5)]
+print('sorted_x_vals: ', sorted_x_vals)
+print(sorted_y_vals)
+#polyfit
+fit_coefficients = []
+for i in range(6):
+	if (i == 0 or i == 5): #leave the first intervall of the 30 V measurement out as there is no 1st and 6th peak
+		__fit = np.polyfit([voltages[j] for j in range(1,5)], [sorted_x_vals[j][i] for j in range(1,5)] , 1)
+		fit_coefficients.append(__fit)
+	else:	
+		__fit = np.polyfit([voltages[j] for j in range(5)], [sorted_x_vals[j][i] for j in range(5)], 1)
+		fit_coefficients.append(__fit)
+
+fit_functions = [np.poly1d(fit_coefficients[i]) for i in range(5)]
+print(fit_functions)
+print(fit_coefficients)
+for i in range(5):
+	plt.plot(voltages, fit_functions[i](voltages), 'b-')
+plt.show()
+
+
+
+"""
 fit = np.polyfit(x_vals, [values_of_minima[0][i] for i in range(4)], 1)
+fit_fn = np.poly1d(fit)
+"""
 
 #create array for polyfit
 
